@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Word & Character Counter – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header"><h1>✍️ Word & Character Counter</h1><p>Paste text to get live word, character, sentence and reading time stats.</p></div>
+
+    <div class="card">
+      <div class="input-group">
+        <label for="textInput">Text</label>
+        <textarea id="textInput" placeholder="Paste your text here..." oninput="updateStats()"></textarea>
+      </div>
+
+      <div class="grid-3">
+        <div class="value-display"><span class="value-label">Words</span><span id="words">0</span></div>
+        <div class="value-display"><span class="value-label">Characters</span><span id="chars">0</span></div>
+        <div class="value-display"><span class="value-label">Sentences</span><span id="sentences">0</span></div>
+      </div>
+
+      <div style="margin-top:15px;" class="info-box">Estimated reading time: <strong id="readTime">0 min</strong></div>
+
+      <div style="margin-top:15px;" class="button-group"><button class="button-full" onclick="copyText()">📋 Copy Text</button><button class="button-full button-secondary" onclick="clearText()">🧹 Clear</button></div>
+    </div>
+  </div>
+
+  <footer><p>© 2026 VTools</p></footer>
+
+  <script>
+    const input = document.getElementById('textInput');
+    function updateStats(){ const t=input.value.trim(); const words = t? t.split(/\s+/).filter(Boolean).length:0; const chars = t.length; const sentences = t? t.split(/[.!?]+/).filter(s=>s.trim()).length:0; document.getElementById('words').textContent=words; document.getElementById('chars').textContent=chars; document.getElementById('sentences').textContent=sentences; document.getElementById('readTime').textContent = Math.max(1, Math.round(words/200)) + ' min'; }
+    function copyText(){navigator.clipboard.writeText(input.value).then(()=>{const f=document.createElement('div');f.className='copy-feedback';f.textContent='✓ Copied';document.body.appendChild(f);setTimeout(()=>f.remove(),1500);});}
+    function clearText(){input.value='';updateStats();}
+  </script>
+</body>
+</html>

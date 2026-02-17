@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Clock & Timers – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header"><h1>⏱️ Clock, Stopwatch & Timer</h1><p>Clock shows local time; stopwatch and timer for productivity.</p></div>
+
+    <div class="card">
+      <div class="section"><h3>Local Clock</h3><div class="grid-2"><div class="value-display"><span class="value-label">Time</span><span id="localTime">--:--:--</span></div><div class="input-group"><label for="tz24">24-hour</label><input id="tz24" type="checkbox" checked></div></div></div>
+
+      <div class="section"><h3>Stopwatch</h3><div class="value-display"><span class="value-label">Elapsed</span><span id="sw">00:00.000</span></div><div class="button-group"><button onclick="swStart()">Start</button><button onclick="swStop()">Stop</button><button onclick="swLap()">Lap</button><button onclick="swReset()">Reset</button></div><div id="laps" style="margin-top:8px"></div></div>
+
+      <div class="section"><h3>Timer</h3><div class="grid-4"><div class="input-group"><label for="minutes">Minutes</label><input id="minutes" type="number" value="1"></div><div class="input-group"><label>Presets</label><div><button class="button-secondary" onclick="setMinutes(5)">5</button><button class="button-secondary" onclick="setMinutes(10)">10</button><button class="button-secondary" onclick="setMinutes(15)">15</button></div></div><div class="input-group"><label for="autoStart">Auto start next</label><input id="autoStart" type="checkbox"></div><div class="input-group"><label for="notifyTimer"><input id="notifyTimer" type="checkbox" checked> Notify on finish</label></div></div>
+      <div class="value-display"><span class="value-label">Remaining</span><span id="timerDisplay">00:00</span></div><div class="button-group"><button onclick="startTimer()">Start</button><button onclick="stopTimer()">Stop</button><button onclick="resetTimer()">Reset</button></div></div>
+
+      <hr />
+      <h4>About this tool</h4>
+      <p>Clock shows local time (12/24 toggle). Stopwatch supports laps. Timer has quick presets and optional auto-start for back-to-back sessions.</p>
+    </div>
+  </div>
+
+  <footer><p>© 2026 VTools</p></footer>
+
+  <script>
+    function pad(n, digits=2){ return n.toString().padStart(digits,'0'); }
+    function updateClock(){ const d=new Date(); const use24 = document.getElementById('tz24').checked; let hh = d.getHours(); let am=''; if(!use24){ am = hh>=12? ' PM':' AM'; hh = hh%12 || 12; } document.getElementById('localTime').textContent = `${pad(hh)}:${pad(d.getMinutes())}:${pad(d.getSeconds())}${use24? '': am}`; }
+    setInterval(updateClock,1000); updateClock();
+
+    // Stopwatch
+    let swStartTime=0, swElapsed=0, swTimer=0, swRunning=false, swLaps=[];
+    function swStart(){ if(swRunning) return; swStartTime=performance.now()-swElapsed; swTimer=setInterval(()=>{ swElapsed=performance.now()-swStartTime; const ms=Math.floor(swElapsed%1000); const s=Math.floor(swElapsed/1000)%60; const m=Math.floor(swElapsed/60000); document.getElementById('sw').textContent = `${pad(m)}:${pad(s)}.${ms.toString().padStart(3,'0')}`;},16); swRunning=true; }
+    function swStop(){ if(!swRunning) return; clearInterval(swTimer); swRunning=false; }
+    function swLap(){ if(!swRunning) return; swLaps.unshift(swElapsed); renderLaps(); }
+    function renderLaps(){ document.getElementById('laps').innerHTML = swLaps.map((t,i)=>{ const ms=Math.floor(t%1000); const s=Math.floor(t/1000)%60; const m=Math.floor(t/60000); return `<div class="value-display"><span class="value-label">Lap ${swLaps.length-i}</span><span>${pad(m)}:${pad(s)}.${ms.toString().padStart(3,'0')}</span></div>`; }).join(''); }
+    function swReset(){ clearInterval(swTimer); swStartTime=0; swElapsed=0; swRunning=false; swLaps=[]; document.getElementById('sw').textContent='00:00.000'; renderLaps(); }
+
+    // Timer
+    let tTimer=0, tRemaining=0, tEnd=0;
+    function setMinutes(m){ document.getElementById('minutes').value = m; }
+    function notifyFinishClock(){
+      const card = document.querySelector('.card');
+      if(card){ const prev = card.style.boxShadow; card.style.boxShadow = '0 0 0 6px rgba(56,189,248,0.35)'; setTimeout(()=>{ card.style.boxShadow = prev || ''; },650); }
+      try{ const ctx = new (window.AudioContext || window.webkitAudioContext)(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.type='sine'; o.frequency.value=660; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime+0.02); o.start(); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.5); o.stop(ctx.currentTime+0.55); }catch(e){}
+    }
+    function startTimer(){ const mins=Number(document.getElementById('minutes').value||0); if(mins<=0){alert('Set minutes > 0');return;} tRemaining=mins*60; tEnd=Date.now()+tRemaining*1000; updateTimer(); tTimer=setInterval(updateTimer,250); }
+    function updateTimer(){ tRemaining=Math.max(0, Math.round((tEnd-Date.now())/1000)); const mm=Math.floor(tRemaining/60); const ss=tRemaining%60; document.getElementById('timerDisplay').textContent = `${pad(mm)}:${pad(ss)}`; if(tRemaining<=0){ clearInterval(tTimer); if(document.getElementById('notifyTimer') && document.getElementById('notifyTimer').checked) notifyFinishClock(); if(document.getElementById('autoStart').checked) startTimer(); else { try{ alert('Timer finished'); }catch(e){} } } }
+    function stopTimer(){ clearInterval(tTimer); }
+    function resetTimer(){ clearInterval(tTimer); tRemaining=0; document.getElementById('timerDisplay').textContent='00:00'; }
+  </script>
+</body>
+</html>

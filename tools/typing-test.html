@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Typing Speed Test – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header"><h1>⌨️ Typing Speed Test</h1><p>Measure WPM and accuracy with a short sample.</p></div>
+
+    <div class="card">
+        <div class="grid-2"><p id="sample">Loading...</p><div class="input-group"><label for="duration">Duration (sec)</label><input id="duration" type="number" value="60" min="5"></div></div>
+        <div style="margin-top:8px;" class="value-display"><span class="value-label">Countdown</span><span id="countdown">—</span></div>
+        <div style="margin-top:6px;" class="input-group"><label for="notify"><input id="notify" type="checkbox" checked> Notify on finish (sound + flash)</label></div>
+      <textarea id="input" placeholder="Start typing here..." rows="6"></textarea>
+      <div class="button-group"><button onclick="startTest()">Start</button><button onclick="resetTest()">Reset</button></div>
+      <div style="margin-top:10px;" class="value-display"><span class="value-label">WPM</span><span id="wpm">—</span></div>
+      <div class="value-display"><span class="value-label">Accuracy</span><span id="acc">—</span></div>
+      <div style="margin-top:12px;" class="value-display"><span class="value-label">Mistakes</span><span id="mistakes">—</span></div>
+
+      <hr />
+      <h4>About this tool</h4>
+      <p>Live typing test with configurable duration. WPM updates at the end and mistakes/accuracy are calculated against the sample. Samples rotate each run.</p>
+    </div>
+  </div>
+
+  <footer><p>© 2026 VTools</p></footer>
+
+  <script>
+    const samples = [
+      `The quick brown fox jumps over the lazy dog. This classic pangram contains every letter of the English alphabet and is commonly used to test fonts and typing. Use it to warm up your fingers and eyes before a longer test.`,
+      `Typing is a learned skill that improves with regular practice. Focus on accuracy first, then speed will naturally follow. Keep your posture straight, hands relaxed, and use the home row as your anchor. Read the text carefully and don't rush.`,
+      `Practice makes perfect. Repeat short drills daily: common letter combinations, frequently used words, and short sentences. This trains muscle memory and reduces errors under time pressure. Breath and rhythm are important parts of fast, accurate typing.`
+    ];
+
+    // A longer pool to assemble samples from when longer text is needed
+    const longPool = samples.join(' ') + ' ' + samples.join(' ') + ' ' + samples.join(' ');
+
+    let startTime=0, duration=60, timerId=0, remaining=0;
+    function buildSampleForDuration(sec){ const maxWordsEstimate = Math.ceil(300 * (sec/60)); // generous upper-bound (300 WPM)
+      const targetWords = Math.max(120, Math.floor(maxWordsEstimate * 1.2)); // ensure sample exceeds likely typing capacity
+      let parts = longPool.split(/\s+/);
+      // create a sample by repeating pool until it's long enough
+      let sampleWords = [];
+      while(sampleWords.length < targetWords){ sampleWords = sampleWords.concat(parts); if(sampleWords.length > 5000) break; }
+      return sampleWords.slice(0, targetWords + 20).join(' ');
+    }
+
+    function startTest(){ clearInterval(timerId); duration = Math.max(5, Number(document.getElementById('duration').value||60)); const sampleText = buildSampleForDuration(duration); document.getElementById('sample').textContent = sampleText; document.getElementById('input').value=''; document.getElementById('input').focus(); startTime=Date.now(); remaining = duration; document.getElementById('countdown').textContent = remaining + 's'; timerId = setInterval(()=>{ remaining--; document.getElementById('countdown').textContent = remaining + 's'; if(remaining<=0) endTest(); },1000); }
+
+    function endTest(){
+      clearInterval(timerId);
+      const text=document.getElementById('input').value.trim();
+      const words=text? text.split(/\s+/).length:0;
+      const minutes=duration/60;
+      const wpm=Math.round(words/minutes);
+      const sample=document.getElementById('sample').textContent;
+      let correctChars=0;
+      let mistakes=0;
+      // Only count mistakes for characters the user actually typed.
+      for(let i=0;i<text.length;i++){
+        if(text[i]===sample[i]) correctChars++; else mistakes++;
+      }
+      // Accuracy is percentage of typed characters that are correct (not penalizing for untyped sample).
+      const acc = text.length? Math.max(0, Math.round((correctChars/text.length)*100)) : 0;
+      document.getElementById('wpm').textContent = wpm;
+      document.getElementById('acc').textContent = acc + '%';
+      document.getElementById('mistakes').textContent = mistakes;
+      document.getElementById('countdown').textContent = '0s';
+        if(document.getElementById('notify') && document.getElementById('notify').checked) notifyFinish();
+    }
+    
+      function notifyFinish(){
+        // visual flash
+        const card = document.querySelector('.card');
+        if(card){ const prev = card.style.boxShadow; card.style.boxShadow = '0 0 0 6px rgba(56,189,248,0.35)'; setTimeout(()=>{ card.style.boxShadow = prev || ''; },650); }
+        // short beep using Web Audio API
+        try{
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sine'; o.frequency.value = 880;
+          o.connect(g); g.connect(ctx.destination);
+          g.gain.setValueAtTime(0.0001, ctx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+          o.start();
+          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+          o.stop(ctx.currentTime + 0.55);
+        }catch(e){ /* ignore if not allowed */ }
+      }
+
+    function resetTest(){ clearInterval(timerId); document.getElementById('input').value=''; document.getElementById('wpm').textContent='—'; document.getElementById('acc').textContent='—'; document.getElementById('sample').textContent='Click Start to load a sample.'; document.getElementById('mistakes').textContent='—'; document.getElementById('countdown').textContent='—'; }
+
+    document.getElementById('sample').textContent='Click Start to load a sample.';
+  </script>
+</body>
+</html>

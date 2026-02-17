@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dice Roller – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header"><h1>🎲 Dice Roller</h1><p>Roll one or many dice with common notations (e.g., 2d6 + 1).</p></div>
+
+    <div class="card">
+      <div class="grid-2"><div class="input-group"><label for="notation">Dice notation</label><input id="notation" value="1d6"></div>
+      <div class="input-group"><label for="repeat">Repeat</label><input id="repeat" type="number" value="1" min="1"></div></div>
+
+      <div class="input-group"><label for="advantage"><input type="checkbox" id="advantage"> Advantage (roll twice, keep higher)</label></div>
+      <div class="input-group"><label for="explode"><input type="checkbox" id="explode"> Exploding dice (reroll max and add)</label></div>
+      <div class="button-group"><button class="button-full" onclick="roll()">Roll</button></div>
+
+      <div style="margin-top:12px;" class="value-display"><span class="value-label">Result</span><span id="rollResult">—</span></div>
+      <div id="rollDetails" style="margin-top:8px;"></div>
+
+      <hr />
+      <h4>About this tool</h4>
+      <p>Supports repeat rolls, advantage, and optional exploding dice. Use standard notation like <em>3d8+2</em>. Results show individual die rolls and totals.</p>
+    </div>
+  </div>
+
+  <footer><p>© 2026 VTools</p></footer>
+
+  <script>
+    function parseNotation(notation){ notation = notation.replace(/\s+/g,''); const m = notation.match(/(\d+)?d(\d+)([+-]\d+)?/i); if(!m) return null; const count = Number(m[1]||1); const sides = Number(m[2]); const mod = Number(m[3]||0); return {count,sides,mod}; }
+    function roll(){
+      const n=document.getElementById('notation').value;
+      const adv=document.getElementById('advantage').checked;
+      const expl=document.getElementById('explode').checked;
+      const times=Math.max(1, Number(document.getElementById('repeat').value||1));
+      const parsed=parseNotation(n);
+      if(!parsed){alert('Invalid dice notation');return;}
+      function rollOnce(){
+        const rolls=[]; let total=0;
+        for(let i=0;i<parsed.count;i++){
+          let r=Math.floor(Math.random()*parsed.sides)+1;
+          rolls.push(r);
+          total+=r;
+          if(expl){ while(r===parsed.sides){ r=Math.floor(Math.random()*parsed.sides)+1; rolls.push(r); total+=r; } }
+        }
+        total+=parsed.mod; return {rolls,total};
+      }
+      const results=[];
+      for(let t=0;t<times;t++){
+        if(adv){ const a=rollOnce(); const b=rollOnce(); results.push(a.total>=b.total? a : b); }
+        else results.push(rollOnce());
+      }
+      const totals = results.map(r=>r.total);
+      document.getElementById('rollResult').textContent = totals.length===1? totals[0] : totals.join(', ');
+      document.getElementById('rollDetails').innerHTML = results.map((r,i)=>`<div class="value-display"><span class="value-label">#${i+1}</span><span>${r.rolls.join(', ')}${parsed.mod? ' '+(parsed.mod>0?'+':'')+parsed.mod:''} → ${r.total}</span></div>`).join('');
+    }
+  </script>
+</body>
+</html>

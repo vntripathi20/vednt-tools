@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Random Number Generator – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header"><h1>🎲 Random Number Generator</h1><p>Generate random integers or decimals in a specified range.</p></div>
+
+    <div class="card">
+        <div class="grid-3">
+          <div class="input-group"><label for="min">Min</label><input type="number" id="min" value="1"></div>
+          <div class="input-group"><label for="max">Max</label><input type="number" id="max" value="100"></div>
+          <div class="input-group"><label for="count">Count</label><input type="number" id="count" value="1" min="1"></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="input-group"><label><input type="checkbox" id="decimal"> Allow decimals</label></div>
+          <div class="input-group"><label for="precision">Precision (decimals)</label><input id="precision" type="number" value="2" min="0" max="8"></div>
+        </div>
+
+        <div class="button-group"><button class="button-full" onclick="generate()">🎯 Generate</button></div>
+
+        <div style="margin-top:15px;" class="value-display"><span class="value-label">Result</span><span id="result">—</span></div>
+
+        <div style="margin-top:12px;" class="button-group"><button class="button-full button-secondary" onclick="copyResult()">📋 Copy</button><button class="button-full" onclick="historyClear()">🗑️ Clear</button></div>
+
+        <div style="margin-top:12px;" id="historyList"></div>
+
+        <hr />
+        <h4>About this tool</h4>
+        <p>This generator supports producing multiple random values at once and decimal precision. Results are kept in the session history for quick copying. Works fully client-side.</p>
+    </div>
+  </div>
+
+  <footer><p>© 2026 VTools</p></footer>
+
+  <script>
+    const history = JSON.parse(sessionStorage.getItem('randHistory')||'[]');
+    function generate(){
+      const min=Number(document.getElementById('min').value);
+      const max=Number(document.getElementById('max').value);
+      const dec=document.getElementById('decimal').checked;
+      const precision = Math.max(0, Number(document.getElementById('precision').value||0));
+      const count = Math.max(1, Number(document.getElementById('count').value||1));
+      if(isNaN(min)||isNaN(max)||min>max){alert('Invalid range');return;}
+      const results = [];
+      for(let i=0;i<count;i++){
+        let v = dec ? (Math.random()*(max-min)+min) : Math.floor(Math.random()*(max-min+1)+min);
+        if(dec) v = Number(v.toFixed(precision));
+        results.push(v);
+      }
+      const out = results.length===1? results[0] : results.join(', ');
+      document.getElementById('result').textContent = out;
+      history.unshift(out);
+      while(history.length>50) history.pop();
+      sessionStorage.setItem('randHistory', JSON.stringify(history));
+      renderHistory();
+    }
+    function renderHistory(){ document.getElementById('historyList').innerHTML = history.map((v,i)=>`<div class="value-display"><span class="value-label">#${i+1}</span><span>${v}</span></div>`).join(''); }
+    function copyResult(){ navigator.clipboard.writeText(document.getElementById('result').textContent); }
+    function historyClear(){ history.length=0; sessionStorage.removeItem('randHistory'); renderHistory(); }
+    renderHistory();
+  </script>
+</body>
+</html>

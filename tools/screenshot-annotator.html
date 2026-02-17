@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Screenshot Annotator – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header"><h1>📝 Screenshot Annotator</h1><p>Upload a screenshot, draw, add text boxes and download the annotated image.</p></div>
+
+    <div class="card">
+      <div class="input-group">
+        <label for="imgFile">Upload Image</label>
+        <input type="file" id="imgFile" accept="image/*">
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <button class="button" id="drawBtn">✏️ Draw</button>
+        <button class="button" id="textBtn">🔤 Text</button>
+        <button class="button button-secondary" id="clearBtn">🧽 Clear Annotations</button>
+      </div>
+
+      <div style="border:1px solid #334155; border-radius:8px; overflow:hidden;">
+        <canvas id="annotCanvas" style="background:#0f172a; display:block; max-width:100%;"></canvas>
+      </div>
+
+      <div style="margin-top:12px;">
+        <button class="button-full" id="downloadBtn">⬇️ Download Annotated Image</button>
+      </div>
+    </div>
+  </div>
+
+  <footer><p>© 2026 VTools</p></footer>
+
+  <script>
+    const imgFile = document.getElementById('imgFile');
+    const canvas = document.getElementById('annotCanvas');
+    const ctx = canvas.getContext('2d');
+    let drawing=false, mode='draw';
+
+    document.getElementById('drawBtn').addEventListener('click',()=>{mode='draw';});
+    document.getElementById('textBtn').addEventListener('click',()=>{mode='text';});
+    document.getElementById('clearBtn').addEventListener('click',()=>{ if(img){ctx.drawImage(img,0,0);}});
+
+    let img=null;
+    imgFile.addEventListener('change', async (e)=>{
+      const f = e.target.files[0]; if(!f) return;
+      const url = await readFile(f);
+      img = new Image(); img.onload=()=>{
+        canvas.width = img.width; canvas.height = img.height; ctx.drawImage(img,0,0);
+      }; img.src = url;
+    });
+
+    canvas.addEventListener('mousedown', (e)=>{
+      if(mode==='draw'){drawing=true; ctx.beginPath(); const p=getPos(e); ctx.moveTo(p.x,p.y);} else if(mode==='text'){const t=prompt('Enter text'); if(t){const p=getPos(e); ctx.fillStyle='#38bdf8'; ctx.font='24px sans-serif'; ctx.fillText(t,p.x,p.y);} }
+    });
+    canvas.addEventListener('mousemove', (e)=>{ if(drawing){ const p=getPos(e); ctx.lineWidth=4; ctx.strokeStyle='#38bdf8'; ctx.lineTo(p.x,p.y); ctx.stroke(); }});
+    window.addEventListener('mouseup', ()=>{ if(drawing){drawing=false;}});
+
+    document.getElementById('downloadBtn').addEventListener('click', ()=>{
+      const link=document.createElement('a'); link.href=canvas.toDataURL(); link.download='annotated.png'; link.click();
+    });
+
+    function getPos(e){ const rect=canvas.getBoundingClientRect(); return {x:(e.clientX-rect.left)*(canvas.width/rect.width), y:(e.clientY-rect.top)*(canvas.height/rect.height)} }
+    function readFile(f){return new Promise(r=>{const fr=new FileReader();fr.onload=e=>r(e.target.result);fr.readAsDataURL(f);});}
+
+  </script>
+</body>
+</html>

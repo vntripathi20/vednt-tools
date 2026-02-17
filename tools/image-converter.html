@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Image Converter – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header">
+      <h1>🖼️ Image Converter</h1>
+      <p>Convert images between PNG, JPEG and WebP. Set quality for lossy formats.</p>
+    </div>
+
+    <div class="card">
+      <div class="input-group">
+        <label for="fileInput">Upload Image</label>
+        <input type="file" id="fileInput" accept="image/*">
+      </div>
+
+      <div class="input-group">
+        <label>Output Format</label>
+        <div class="format-grid">
+          <button class="format-btn active" id="fmtPng">PNG</button>
+          <button class="format-btn" id="fmtJpg">JPG</button>
+          <button class="format-btn" id="fmtWebp">WebP</button>
+        </div>
+      </div>
+
+      <div class="quality-slider">
+        <div class="slider-label"><label for="qualityRange">Quality</label><span class="slider-value" id="qualityLabel">80%</span></div>
+        <input type="range" id="qualityRange" min="10" max="100" value="80">
+      </div>
+
+      <div class="button-group">
+        <button class="button-full" id="convertBtn">⬇️ Convert & Download</button>
+      </div>
+
+      <div id="preview" style="margin-top:20px;display:none;"></div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 VTools</p>
+  </footer>
+
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const fmtPng = document.getElementById('fmtPng');
+    const fmtJpg = document.getElementById('fmtJpg');
+    const fmtWebp = document.getElementById('fmtWebp');
+    const qualityRange = document.getElementById('qualityRange');
+    const qualityLabel = document.getElementById('qualityLabel');
+    const convertBtn = document.getElementById('convertBtn');
+    const preview = document.getElementById('preview');
+
+    let format = 'png';
+    fmtPng.addEventListener('click', () => setFormat('png'));
+    fmtJpg.addEventListener('click', () => setFormat('jpg'));
+    fmtWebp.addEventListener('click', () => setFormat('webp'));
+
+    function setFormat(f){
+      format = f;
+      document.querySelectorAll('.format-btn').forEach(b=>b.classList.remove('active'));
+      if(f==='png') fmtPng.classList.add('active');
+      if(f==='jpg') fmtJpg.classList.add('active');
+      if(f==='webp') fmtWebp.classList.add('active');
+    }
+
+    qualityRange.addEventListener('input', ()=>{ qualityLabel.textContent = qualityRange.value + '%'; });
+
+    convertBtn.addEventListener('click', async ()=>{
+      const file = fileInput.files && fileInput.files[0];
+      if(!file){ alert('Choose an image first'); return; }
+      const img = new Image();
+      const dataUrl = await readFile(file);
+      img.src = dataUrl;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width; canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img,0,0);
+        const quality = qualityRange.value/100;
+        const mime = format==='jpg' ? 'image/jpeg' : `image/${format}`;
+        canvas.toBlob(blob=>{
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = `converted.${format==='jpg'? 'jpg': format}`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }, mime, quality);
+        preview.innerHTML = `<img src="${canvas.toDataURL()}" style="max-width:300px;">`;
+        preview.style.display='block';
+      };
+    });
+
+    function readFile(file){return new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(file);});}
+  </script>
+</body>
+</html>

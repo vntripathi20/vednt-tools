@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pomodoro Timer – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header"><h1>🍅 Pomodoro Timer</h1><p>Start a focused session and short/long breaks.</p></div>
+
+    <div class="card">
+      <div class="grid-4">
+        <div class="input-group"><label for="work">Work (min)</label><input id="work" type="number" value="25"></div>
+        <div class="input-group"><label for="short">Short Break (min)</label><input id="short" type="number" value="5"></div>
+        <div class="input-group"><label for="long">Long Break (min)</label><input id="long" type="number" value="15"></div>
+        <div class="input-group"><label for="auto">Auto-advance</label><input id="auto" type="checkbox"></div>
+        <div class="input-group"><label for="notifyPom"><input id="notifyPom" type="checkbox" checked> Notify on phase end</label></div>
+      </div>
+
+      <div class="value-display"><span class="value-label">State</span><span id="state">Idle</span></div>
+      <div class="value-display"><span class="value-label">Remaining</span><span id="remaining">00:00</span></div>
+      <div class="value-display"><span class="value-label">Completed Sessions</span><span id="sessions">0</span></div>
+      <div class="button-group"><button onclick="startPomodoro()">Start</button><button onclick="stopPomodoro()">Stop</button><button onclick="resetPomodoro()">Reset</button></div>
+
+      <hr />
+      <h4>About this tool</h4>
+      <p>Pomodoro timer with a completed-session counter and optional auto-advance to move automatically between work and breaks. Runs fully client-side.</p>
+    </div>
+  </div>
+
+  <footer><p>© 2026 VTools</p></footer>
+
+  <script>
+    function pad(n){return n.toString().padStart(2,'0');}
+    let timer=0, end=0, state='idle', cycle=0, sessions=0;
+    function notifyFinishPom(){
+      const card = document.querySelector('.card');
+      if(card){ const prev = card.style.boxShadow; card.style.boxShadow = '0 0 0 6px rgba(56,189,248,0.35)'; setTimeout(()=>{ card.style.boxShadow = prev || ''; },650); }
+      try{ const ctx = new (window.AudioContext || window.webkitAudioContext)(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.type='sine'; o.frequency.value=880; o.connect(g); g.connect(ctx.destination); g.gain.setValueAtTime(0.0001, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime+0.02); o.start(); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.5); o.stop(ctx.currentTime+0.55); }catch(e){}
+    }
+    function updateRemaining(){ const rem=Math.max(0,Math.round((end-Date.now())/1000)); const mm=Math.floor(rem/60); const ss=rem%60; document.getElementById('remaining').textContent = `${pad(mm)}:${pad(ss)}`; if(rem<=0){ clearInterval(timer); completePhase(); } }
+    function startPomodoro(){ const w=Number(document.getElementById('work').value||25); state='work'; setPhase(w); }
+    function setPhase(minutes){ document.getElementById('state').textContent = state; end = Date.now()+minutes*60000; updateRemaining(); timer=setInterval(updateRemaining,250); }
+    function completePhase(){
+      // notify at end of phase if enabled
+      if(document.getElementById('notifyPom') && document.getElementById('notifyPom').checked) notifyFinishPom();
+      if(state==='work'){ sessions++; document.getElementById('sessions').textContent = sessions; cycle++; if(document.getElementById('auto').checked){ if(cycle%4===0){ state='long break'; setPhase(Number(document.getElementById('long').value||15)); } else { state='short break'; setPhase(Number(document.getElementById('short').value||5)); } } else { state='idle'; document.getElementById('state').textContent='Idle'; } } else { // finished a break
+        if(document.getElementById('auto').checked){ state='work'; setPhase(Number(document.getElementById('work').value||25)); } else { state='idle'; document.getElementById('state').textContent='Idle'; }
+      }
+    }
+    function nextState(){ completePhase(); }
+    function stopPomodoro(){ clearInterval(timer); }
+    function resetPomodoro(){ clearInterval(timer); state='idle'; document.getElementById('state').textContent='Idle'; document.getElementById('remaining').textContent='00:00'; cycle=0; sessions=0; document.getElementById('sessions').textContent='0'; }
+  </script>
+</body>
+</html>

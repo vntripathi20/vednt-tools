@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Coin Flip – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header"><h1>🪙 Coin Flip</h1><p>Virtual coin flip with optional weighted odds.</p></div>
+
+    <div class="card">
+      <div class="grid-3">
+        <div class="input-group"><label for="heads">Heads (%)</label><input type="number" id="heads" value="50" min="0" max="100"></div>
+        <div class="input-group"><label for="tails">Tails (%)</label><input type="number" id="tails" value="50" min="0" max="100"></div>
+        <div class="input-group"><label for="flips">Flips</label><input id="flips" type="number" value="1" min="1"></div>
+      </div>
+
+      <div class="button-group"><button class="button-full" onclick="flip()">Flip</button>
+        <button class="button-secondary" onclick="preset('fair')">Fair</button>
+        <button class="button-secondary" onclick="preset('heads')">Heads 70%</button>
+      </div>
+
+      <div style="margin-top:12px;" class="value-display"><span class="value-label">Result</span><span id="result">—</span></div>
+
+      <div id="history" style="margin-top:12px;"></div>
+
+      <hr />
+      <h4>About this tool</h4>
+      <p>Flip one or many virtual coins. You can weight the odds and run multiple flips at once; results and counts are shown below.</p>
+    </div>
+  </div>
+
+  <footer><p>© 2026 VTools</p></footer>
+
+  <script>
+    const hist=[];
+    function preset(name){ if(name==='fair'){ document.getElementById('heads').value=50; document.getElementById('tails').value=50; } else if(name==='heads'){ document.getElementById('heads').value=70; document.getElementById('tails').value=30; } }
+    function flip(){ let h=Number(document.getElementById('heads').value); let t=Number(document.getElementById('tails').value); let times=Math.max(1, Number(document.getElementById('flips').value||1)); if(isNaN(h)||isNaN(t)||h<0||t<0){alert('Invalid odds');return;} const sum=h+t; if(sum<=0){alert('Sum must be > 0');return;} const results=[]; for(let i=0;i<times;i++){ const pick=Math.random()*sum; const res = pick < h ? 'Heads' : 'Tails'; results.push(res); hist.unshift(res); }
+      const counts = results.reduce((acc,r)=>{ acc[r]=(acc[r]||0)+1; return acc; },{});
+      document.getElementById('result').textContent = results.length===1? results[0] : `${counts.Heads||0} Heads, ${counts.Tails||0} Tails`;
+      while(hist.length>100) hist.pop(); render(); }
+    function render(){ document.getElementById('history').innerHTML = hist.slice(0,50).map((h,i)=>`<div class="value-display"><span class="value-label">#${i+1}</span><span>${h}</span></div>`).join(''); }
+  </script>
+</body>
+</html>
