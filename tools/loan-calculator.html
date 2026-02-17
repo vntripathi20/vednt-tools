@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Loan Calculator – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+  <style>
+    .loan-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
+    .loan-summary { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 20px 0; }
+    .summary-box { background: rgba(56,189,248,0.1); border: 1px solid #38bdf8; padding: 15px; border-radius: 8px; }
+    .summary-label { font-size: 0.9em; color: #94a3b8; margin-bottom: 5px; }
+    .summary-value { font-size: 1.3em; font-weight: bold; color: #38bdf8; }
+    .payment-schedule { max-height: 400px; overflow-y: auto; margin-top: 15px; }
+    .schedule-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 10px; border-bottom: 1px solid #334155; font-size: 0.85em; }
+    .schedule-header { background: rgba(56,189,248,0.1); font-weight: bold; }
+  </style>
+  <script src="../analytics.js"></script>
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header"><h1>💰 Loan Calculator</h1><p>Calculate interest, payments, and generate amortization schedules.</p></div>
+
+    <div class="card">
+      <div class="loan-grid">
+        <div class="input-group"><label for="principal">Principal ($)</label><input id="principal" type="number" value="300000" min="0" step="1000" oninput="calculate()" /></div>
+        <div class="input-group"><label for="rate">Annual Interest Rate (%)</label><input id="rate" type="number" value="5.5" min="0" max="30" step="0.01" oninput="calculate()" /></div>
+        <div class="input-group"><label for="years">Loan Term (Years)</label><input id="years" type="number" value="30" min="1" max="50" step="0.5" oninput="calculate()" /></div>
+        <div class="input-group"><label for="loanType">Type</label>
+          <select id="loanType" onchange="calculate()">
+            <option value="fixed">Fixed Rate</option>
+            <option value="variable">Variable (Estimate)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="loan-summary">
+        <div class="summary-box">
+          <div class="summary-label">Monthly Payment</div>
+          <div class="summary-value" id="monthlyPayment">$0.00</div>
+        </div>
+        <div class="summary-box">
+          <div class="summary-label">Total Interest</div>
+          <div class="summary-value" id="totalInterest">$0.00</div>
+        </div>
+        <div class="summary-box">
+          <div class="summary-label">Total Cost</div>
+          <div class="summary-value" id="totalCost">$0.00</div>
+        </div>
+        <div class="summary-box">
+          <div class="summary-label">Payoff Date</div>
+          <div class="summary-value" id="payoffDate">—</div>
+        </div>
+      </div>
+
+      <div>
+        <h4>Amortization Schedule (First 12 Months)</h4>
+        <div class="schedule-row schedule-header">
+          <div>Payment #</div>
+          <div>Principal</div>
+          <div>Interest</div>
+          <div>Balance</div>
+        </div>
+        <div class="payment-schedule" id="schedule"></div>
+      </div>
+
+      <div class="button-group" style="margin-top:15px;">
+        <button class="button-secondary" onclick="exportSchedule()">📥 Export Schedule</button>
+      </div>
+
+      <hr />
+      <h4>About this tool</h4>
+      <p>Comprehensive loan calculator with monthly payment calculations, total interest, amortization schedule, and payoff date. Works for mortgages, auto loans, and personal loans.</p>
+    </div>
+  </div>
+
+  <footer><p>© 2026 VTools</p></footer>
+
+  <script>
+    function format(num) {
+      return '$' + num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    function calculate() {
+      const principal = parseFloat(document.getElementById('principal').value) || 0;
+      const annualRate = parseFloat(document.getElementById('rate').value) || 0;
+      const years = parseFloat(document.getElementById('years').value) || 1;
+      
+      const monthlyRate = annualRate / 100 / 12;
+      const numPayments = years * 12;
+      
+      // Monthly payment formula: P * [r(1+r)^n] / [(1+r)^n - 1]
+      const monthlyPayment = monthlyRate === 0 
+        ? principal / numPayments 
+        : (principal * (monthlyRate * Math.pow(1 + monthlyRate, numPayments))) / (Math.pow(1 + monthlyRate, numPayments) - 1);
+      
+      const totalPaid = monthlyPayment * numPayments;
+      const totalInterest = totalPaid - principal;
+
+      document.getElementById('monthlyPayment').textContent = format(monthlyPayment);
+      document.getElementById('totalInterest').textContent = format(totalInterest);
+      document.getElementById('totalCost').textContent = format(totalPaid);
+
+      const payoffDate = new Date();
+      payoffDate.setMonth(payoffDate.getMonth() + numPayments);
+      document.getElementById('payoffDate').textContent = payoffDate.toLocaleDateString();
+
+      // Generate amortization schedule (first 12 months)
+      let balance = principal;
+      let scheduleHtml = '';
+      for (let i = 1; i <= Math.min(12, numPayments); i++) {
+        const interestPayment = balance * monthlyRate;
+        const principalPayment = monthlyPayment - interestPayment;
+        balance -= principalPayment;
+        balance = Math.max(0, balance);
+
+        scheduleHtml += `
+          <div class="schedule-row">
+            <div>${i}</div>
+            <div>${format(principalPayment)}</div>
+            <div>${format(interestPayment)}</div>
+            <div>${format(balance)}</div>
+          </div>
+        `;
+      }
+      if (numPayments > 12) {
+        scheduleHtml += `<div class="schedule-row" style="text-align:center;"><em>... ${Math.floor(numPayments - 12)} more payments ...</em></div>`;
+      }
+
+      document.getElementById('schedule').innerHTML = scheduleHtml;
+    }
+
+    function exportSchedule() {
+      const principal = parseFloat(document.getElementById('principal').value) || 0;
+      const annualRate = parseFloat(document.getElementById('rate').value) || 0;
+      const years = parseFloat(document.getElementById('years').value) || 1;
+      
+      const monthlyRate = annualRate / 100 / 12;
+      const numPayments = years * 12;
+      const monthlyPayment = monthlyRate === 0 
+        ? principal / numPayments 
+        : (principal * (monthlyRate * Math.pow(1 + monthlyRate, numPayments))) / (Math.pow(1 + monthlyRate, numPayments) - 1);
+
+      let csv = 'Payment #,Principal,Interest,Balance\n';
+      let balance = principal;
+      for (let i = 1; i <= numPayments; i++) {
+        const interestPayment = balance * monthlyRate;
+        const principalPayment = monthlyPayment - interestPayment;
+        balance -= principalPayment;
+        balance = Math.max(0, balance);
+        csv += `${i},${principalPayment.toFixed(2)},${interestPayment.toFixed(2)},${balance.toFixed(2)}\n`;
+      }
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'amortization-schedule.csv';
+      link.click();
+    }
+
+    calculate();
+  </script>
+</body>
+</html>

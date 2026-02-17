@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>To-Do List – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+  <style>
+    .todo-input-group { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-bottom: 15px; }
+    .todo-input { padding: 10px; background: #1e293b; border: 1px solid #38bdf8; color: #e2e8f0; border-radius: 6px; }
+    .todo-item { display: grid; grid-template-columns: 30px 1fr auto; gap: 10px; align-items: center; padding: 12px; background: rgba(56,189,248,0.05); border-left: 3px solid #38bdf8; margin-bottom: 8px; border-radius: 4px; }
+    .todo-item.completed { opacity: 0.6; background: rgba(34,197,94,0.05); border-color: #22c55e; }
+    .todo-item.completed .todo-text { text-decoration: line-through; }
+    .todo-checkbox { cursor: pointer; width: 20px; height: 20px; }
+    .todo-text { flex: 1; }
+    .todo-delete { cursor: pointer; color: #ef4444; font-size: 18px; }
+    .todo-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+    .todo-filter { display: flex; gap: 8px; margin-bottom: 15px; }
+    .filter-btn { padding: 8px 12px; border: 1px solid #38bdf8; background: transparent; color: #38bdf8; cursor: pointer; border-radius: 4px; font-size: 0.85em; }
+    .filter-btn.active { background: #38bdf8; color: #0f172a; }
+  </style>
+  <script src="../analytics.js"></script>
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header"><h1>✅ To-Do List</h1><p>Simple task management with filters and progress tracking.</p></div>
+
+    <div class="card">
+      <div class="todo-input-group">
+        <input id="todoInput" class="todo-input" placeholder="Add a new task..." />
+        <button class="button-full" onclick="addTodo()">Add</button>
+      </div>
+
+      <div class="todo-stats">
+        <div class="stat-box">
+          <div class="stat-label">Total</div>
+          <div class="stat-value" id="totalTodos">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Completed</div>
+          <div class="stat-value" id="completedTodos">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Progress</div>
+          <div class="stat-value" id="progressTodos">0%</div>
+        </div>
+      </div>
+
+      <div class="todo-filter" style="margin-top: 15px;">
+        <button class="filter-btn active" onclick="filterTodos('all')">All</button>
+        <button class="filter-btn" onclick="filterTodos('active')">Active</button>
+        <button class="filter-btn" onclick="filterTodos('completed')">Completed</button>
+      </div>
+
+      <div id="todoList"></div>
+
+      <div class="button-group" style="margin-top: 12px;">
+        <button class="button-secondary" onclick="clearCompleted()">Clear Completed</button>
+        <button class="button-secondary" onclick="resetTodos()">Clear All</button>
+      </div>
+
+      <hr />
+      <h4>About this tool</h4>
+      <p>Lightweight to-do list with persist storage, filters (all/active/completed), and progress tracking. Tasks are saved to local storage automatically.</p>
+    </div>
+  </div>
+
+  <footer><p>© 2026 VTools</p></footer>
+
+  <script>
+    let todos = JSON.parse(localStorage.getItem('todos') || '[]');
+    let filter = 'all';
+
+    function saveTodos() {
+      localStorage.setItem('todos', JSON.stringify(todos));
+    }
+
+    function addTodo() {
+      const input = document.getElementById('todoInput');
+      const text = input.value.trim();
+      if (!text) return;
+      todos.push({ id: Date.now(), text, completed: false });
+      input.value = '';
+      saveTodos();
+      render();
+    }
+
+    function toggleTodo(id) {
+      const todo = todos.find(t => t.id === id);
+      if (todo) todo.completed = !todo.completed;
+      saveTodos();
+      render();
+    }
+
+    function deleteTodo(id) {
+      todos = todos.filter(t => t.id !== id);
+      saveTodos();
+      render();
+    }
+
+    function filterTodos(f) {
+      filter = f;
+      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      render();
+    }
+
+    function clearCompleted() {
+      todos = todos.filter(t => !t.completed);
+      saveTodos();
+      render();
+    }
+
+    function resetTodos() {
+      if (confirm('Delete all tasks?')) {
+        todos = [];
+        saveTodos();
+        render();
+      }
+    }
+
+    function render() {
+      const filtered = filter === 'all' ? todos : filter === 'completed' ? todos.filter(t => t.completed) : todos.filter(t => !t.completed);
+      document.getElementById('todoList').innerHTML = filtered.map(t => `
+        <div class="todo-item ${t.completed ? 'completed' : ''}">
+          <input type="checkbox" class="todo-checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTodo(${t.id})" />
+          <div class="todo-text">${t.text}</div>
+          <span class="todo-delete" onclick="deleteTodo(${t.id})">✕</span>
+        </div>
+      `).join('');
+
+      const completed = todos.filter(t => t.completed).length;
+      const total = todos.length;
+      document.getElementById('totalTodos').textContent = total;
+      document.getElementById('completedTodos').textContent = completed;
+      document.getElementById('progressTodos').textContent = total > 0 ? Math.round((completed / total) * 100) + '%' : '0%';
+    }
+
+    document.getElementById('todoInput').addEventListener('keypress', e => {
+      if (e.key === 'Enter') addTodo();
+    });
+
+    render();
+  </script>
+</body>
+</html>

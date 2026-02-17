@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>QR Code Generator – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    #qrPreview { display: flex; justify-content: center; align-items: center; margin: 20px 0; min-height: 250px; background: rgba(56,189,248,0.05); border-radius: 8px; }
+  </style>
+  <script src="../analytics.js"></script>
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header"><h1>📱 QR Code Generator</h1><p>Generate QR codes from text, URLs, and contact info.</p></div>
+
+    <div class="card">
+      <div class="grid-2">
+        <div class="input-group"><label for="qrType">Type</label>
+          <select id="qrType" onchange="updateQR()">
+            <option value="text">Text</option>
+            <option value="url">URL</option>
+            <option value="email">Email</option>
+            <option value="phone">Phone</option>
+            <option value="wifi">WiFi</option>
+          </select>
+        </div>
+        <div class="input-group"><label for="qrSize">Size (px)</label><input id="qrSize" type="number" value="200" min="100" max="500" onchange="updateQR()" /></div>
+      </div>
+
+      <div id="textInput" class="input-group"><label>Text</label><textarea id="qrText" placeholder="Enter text..." onchange="updateQR()"></textarea></div>
+      <div id="urlInput" class="input-group" style="display:none;"><label>URL</label><input id="qrUrl" placeholder="https://example.com" type="url" onchange="updateQR()" /></div>
+      <div id="emailInput" class="input-group" style="display:none;"><label>Email</label><input id="qrEmail" placeholder="example@domain.com" type="email" onchange="updateQR()" /></div>
+      <div id="phoneInput" class="input-group" style="display:none;"><label>Phone</label><input id="qrPhone" placeholder="+1234567890" type="tel" onchange="updateQR()" /></div>
+      <div id="wifiInput" style="display:none;">
+        <div class="input-group"><label>SSID</label><input id="wifiSSID" placeholder="Network name" onchange="updateQR()" /></div>
+        <div class="input-group"><label>Password</label><input id="wifiPassword" placeholder="Network password" onchange="updateQR()" /></div>
+      </div>
+
+      <div id="qrPreview"></div>
+
+      <div class="button-group">
+        <button class="button-full" onclick="downloadQR()">⬇️ Download QR Code</button>
+        <button class="button-secondary" onclick="copyQRLink()">📋 Copy Link</button>
+      </div>
+
+      <hr />
+      <h4>About this tool</h4>
+      <p>Generate QR codes for text, URLs, emails, phone numbers, and WiFi credentials. Adjustable size, downloadable as PNG, and shareable link copy function.</p>
+    </div>
+  </div>
+
+  <footer><p>© 2026 VTools</p></footer>
+
+  <script>
+    let currentQR = null;
+
+    function updateQR() {
+      const type = document.getElementById('qrType').value;
+      const size = Number(document.getElementById('qrSize').value);
+
+      // Show/hide inputs based on type
+      document.getElementById('textInput').style.display = type === 'text' ? 'block' : 'none';
+      document.getElementById('urlInput').style.display = type === 'url' ? 'block' : 'none';
+      document.getElementById('emailInput').style.display = type === 'email' ? 'block' : 'none';
+      document.getElementById('phoneInput').style.display = type === 'phone' ? 'block' : 'none';
+      document.getElementById('wifiInput').style.display = type === 'wifi' ? 'block' : 'none';
+
+      let data = '';
+      if (type === 'text') data = document.getElementById('qrText').value || 'Empty';
+      else if (type === 'url') data = document.getElementById('qrUrl').value || 'https://example.com';
+      else if (type === 'email') data = 'mailto:' + (document.getElementById('qrEmail').value || 'example@domain.com');
+      else if (type === 'phone') data = 'tel:' + (document.getElementById('qrPhone').value || '1234567890');
+      else if (type === 'wifi') {
+        const ssid = document.getElementById('wifiSSID').value || 'NetworkName';
+        const pw = document.getElementById('wifiPassword').value || 'Password';
+        data = `WIFI:T:WPA;S:${ssid};P:${pw};;`;
+      }
+
+      const container = document.getElementById('qrPreview');
+      container.innerHTML = '';
+      currentQR = new QRCode(container, { text: data, width: size, height: size });
+    }
+
+    function downloadQR() {
+      const canvas = document.querySelector('#qrPreview canvas');
+      if (!canvas) { alert('Generate a QR code first'); return; }
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = 'qrcode.png';
+      link.click();
+    }
+
+    function copyQRLink() {
+      const type = document.getElementById('qrType').value;
+      let data = '';
+      if (type === 'text') data = document.getElementById('qrText').value;
+      else if (type === 'url') data = document.getElementById('qrUrl').value;
+      else if (type === 'email') data = 'mailto:' + document.getElementById('qrEmail').value;
+      else if (type === 'phone') data = 'tel:' + document.getElementById('qrPhone').value;
+      if (data) { navigator.clipboard.writeText(data); alert('Copied to clipboard'); }
+    }
+
+    updateQR();
+  </script>
+</body>
+</html>

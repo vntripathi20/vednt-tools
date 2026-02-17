@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kanban Board – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+  <style>
+    .kanban-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; min-height: 400px; }
+    .kanban-column { background: rgba(56,189,248,0.05); border: 2px solid #38bdf8; border-radius: 8px; padding: 15px; }
+    .kanban-header { font-weight: bold; font-size: 1.1em; margin-bottom: 15px; color: #38bdf8; display: flex; justify-content: space-between; align-items: center; }
+    .kanban-count { font-size: 0.85em; background: #38bdf8; color: #0f172a; padding: 2px 8px; border-radius: 12px; }
+    .kanban-card { background: #1e293b; border-left: 4px solid #38bdf8; padding: 10px; margin-bottom: 10px; border-radius: 4px; cursor: move; user-select: none; }
+    .kanban-card:hover { background: #334155; }
+    .kanban-input { width: 100%; padding: 8px; background: #1e293b; border: 1px solid #38bdf8; color: #e2e8f0; border-radius: 4px; margin-bottom: 10px; }
+    .kanban-delete { float: right; cursor: pointer; color: #ef4444; font-weight: bold; }
+    @media (max-width: 1024px) {
+      .kanban-container { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .kanban-container { grid-template-columns: 1fr; }
+    }
+  </style>
+  <script src="../analytics.js"></script>
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header"><h1>📋 Kanban Board</h1><p>Organize tasks in columns. Persistent storage across sessions.</p></div>
+
+    <div class="card">
+      <div class="button-group">
+        <button class="button-secondary" onclick="resetBoard()">Reset Board</button>
+      </div>
+
+      <div class="kanban-container" id="kanbanBoard"></div>
+
+      <hr />
+      <h4>About this tool</h4>
+      <p>Simple kanban board with three columns (To-Do, In Progress, Done). Add cards, delete them, and track task counts. All data persists in local storage.</p>
+    </div>
+  </div>
+
+  <footer><p>© 2026 VTools</p></footer>
+
+  <script>
+    const defaultBoard = {
+      todo: [],
+      inProgress: [],
+      done: []
+    };
+
+    let board = JSON.parse(localStorage.getItem('kanbanBoard') || JSON.stringify(defaultBoard));
+
+    function saveBoard() {
+      localStorage.setItem('kanbanBoard', JSON.stringify(board));
+    }
+
+    function addCard(column) {
+      const input = document.getElementById(`input-${column}`);
+      const text = input.value.trim();
+      if (!text) return;
+      board[column].push({ id: Date.now(), text });
+      input.value = '';
+      saveBoard();
+      render();
+    }
+
+    function deleteCard(column, id) {
+      board[column] = board[column].filter(c => c.id !== id);
+      saveBoard();
+      render();
+    }
+
+    function moveCard(fromColumn, toColumn, id) {
+      const card = board[fromColumn].find(c => c.id === id);
+      if (!card) return;
+      board[fromColumn] = board[fromColumn].filter(c => c.id !== id);
+      board[toColumn].push(card);
+      saveBoard();
+      render();
+    }
+
+    function resetBoard() {
+      if (confirm('Reset all cards?')) {
+        board = JSON.parse(JSON.stringify(defaultBoard));
+        saveBoard();
+        render();
+      }
+    }
+
+    function render() {
+      const columns = [
+        { key: 'todo', label: 'To-Do', color: '#ef4444' },
+        { key: 'inProgress', label: 'In Progress', color: '#f59e0b' },
+        { key: 'done', label: 'Done', color: '#22c55e' }
+      ];
+
+      document.getElementById('kanbanBoard').innerHTML = columns.map(col => `
+        <div class="kanban-column">
+          <div class="kanban-header">
+            <span>${col.label}</span>
+            <span class="kanban-count" style="background:${col.color};">${board[col.key].length}</span>
+          </div>
+          ${board[col.key].map(card => `
+            <div class="kanban-card">
+              <span class="kanban-delete" onclick="deleteCard('${col.key}', ${card.id})">✕</span>
+              <div>${card.text}</div>
+              <div style="font-size:0.75em;color:#94a3b8;margin-top:8px;">
+                ${col.key !== 'inProgress' ? `<button class="button-secondary" style="padding:4px 8px;font-size:0.8em;" onclick="moveCard('${col.key}', 'inProgress', ${card.id})">→ In Progress</button> ` : ''}
+                ${col.key !== 'done' ? `<button class="button-secondary" style="padding:4px 8px;font-size:0.8em;" onclick="moveCard('${col.key}', 'done', ${card.id})">→ Done</button> ` : ''}
+              </div>
+            </div>
+          `).join('')}
+          <input class="kanban-input" id="input-${col.key}" placeholder="Add a card..." onkeypress="if(event.key==='Enter') addCard('${col.key}')" />
+          <button class="button-full" style="font-size:0.85em;" onclick="addCard('${col.key}')">+</button>
+        </div>
+      `).join('');
+    }
+
+    render();
+  </script>
+</body>
+</html>

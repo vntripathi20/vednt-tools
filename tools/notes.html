@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Notes – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+  <style>
+    .notes-container { display: grid; grid-template-columns: 300px 1fr; gap: 15px; min-height: 400px; }
+    .notes-list { border-right: 1px solid #38bdf8; padding-right: 15px; overflow-y: auto; max-height: 500px; }
+    .note-item { padding: 12px; background: rgba(56,189,248,0.1); border-left: 3px solid #38bdf8; margin-bottom: 8px; cursor: pointer; border-radius: 4px; }
+    .note-item.active { background: rgba(56,189,248,0.3); border-color: #22c55e; }
+    .note-item:hover { background: rgba(56,189,248,0.2); }
+    .note-preview { font-size: 0.85em; color: #94a3b8; }
+    .note-time { font-size: 0.75em; color: #475569; margin-top: 4px; }
+    .notes-editor { display: flex; flex-direction: column; }
+    .note-title { font-size: 1.2em; font-weight: bold; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #38bdf8; }
+    .note-textarea { flex: 1; background: #1e293b; border: 1px solid #38bdf8; color: #e2e8f0; padding: 12px; border-radius: 6px; font-family: inherit; font-size: 0.95em; resize: none; min-height: 300px; }
+    .note-meta { font-size: 0.8em; color: #94a3b8; margin-top: 8px; }
+    @media (max-width: 768px) {
+      .notes-container { grid-template-columns: 1fr; }
+      .notes-list { border-right: none; border-bottom: 1px solid #38bdf8; padding-right: 0; padding-bottom: 15px; }
+    }
+  </style>
+  <script src="../analytics.js"></script>
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header"><h1>📝 Notes</h1><p>Simple note-taking with persistent storage and quick access.</p></div>
+
+    <div class="card">
+      <div class="button-group">
+        <button class="button-full" onclick="newNote()">+ New Note</button>
+        <button class="button-secondary" onclick="deleteNote()">Delete</button>
+      </div>
+
+      <div class="notes-container">
+        <div class="notes-list" id="notesList"></div>
+        <div class="notes-editor" id="editorSection" style="display:none;">
+          <div class="note-title" id="noteTitle">Untitled</div>
+          <textarea id="noteContent" class="note-textarea" placeholder="Start typing..." onchange="saveCurrentNote()"></textarea>
+          <div class="note-meta" id="noteMeta"></div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: center; color: #475569;" id="noNotesMsg">
+          <p>No notes yet. Create one to get started!</p>
+        </div>
+      </div>
+
+      <hr />
+      <h4>About this tool</h4>
+      <p>Simple note-taking app with persistent storage. Notes are automatically saved as you type and persisted in local storage. Click to open, create new with button.</p>
+    </div>
+  </div>
+
+  <footer><p>© 2026 VTools</p></footer>
+
+  <script>
+    let notes = JSON.parse(localStorage.getItem('notes') || '[]');
+    let currentNoteId = null;
+
+    function saveNotes() {
+      localStorage.setItem('notes', JSON.stringify(notes));
+    }
+
+    function newNote() {
+      const note = {
+        id: Date.now(),
+        title: 'Untitled Note',
+        content: '',
+        created: new Date().toLocaleString(),
+        modified: new Date().toLocaleString()
+      };
+      notes.unshift(note);
+      currentNoteId = note.id;
+      saveNotes();
+      render();
+      openNote(note.id);
+    }
+
+    function openNote(id) {
+      currentNoteId = id;
+      const note = notes.find(n => n.id === id);
+      if (!note) return;
+
+      document.getElementById('noteTitle').textContent = note.title;
+      document.getElementById('noteContent').value = note.content;
+      document.getElementById('noteMeta').textContent = `Modified: ${note.modified}`;
+      document.getElementById('editorSection').style.display = 'flex';
+      document.getElementById('noNotesMsg').style.display = 'none';
+
+      document.querySelectorAll('.note-item').forEach(el => el.classList.remove('active'));
+      event.target.closest('.note-item').classList.add('active');
+    }
+
+    function saveCurrentNote() {
+      if (!currentNoteId) return;
+      const note = notes.find(n => n.id === currentNoteId);
+      if (note) {
+        note.content = document.getElementById('noteContent').value;
+        note.title = note.content.split('\n')[0].substring(0, 50) || 'Untitled Note';
+        note.modified = new Date().toLocaleString();
+        saveNotes();
+        render();
+      }
+    }
+
+    function deleteNote() {
+      if (!currentNoteId || !confirm('Delete this note?')) return;
+      notes = notes.filter(n => n.id !== currentNoteId);
+      currentNoteId = null;
+      saveNotes();
+      render();
+      document.getElementById('editorSection').style.display = 'none';
+      if (notes.length > 0) openNote(notes[0].id);
+    }
+
+    function render() {
+      if (notes.length === 0) {
+        document.getElementById('notesList').innerHTML = '';
+        document.getElementById('noNotesMsg').style.display = 'flex';
+        return;
+      }
+      document.getElementById('notesList').innerHTML = notes.map(n => `
+        <div class="note-item ${n.id === currentNoteId ? 'active' : ''}" onclick="openNote(${n.id})">
+          <div style="font-weight: bold;">${n.title}</div>
+          <div class="note-preview">${n.content.substring(0, 60)}...</div>
+          <div class="note-time">${n.modified}</div>
+        </div>
+      `).join('');
+    }
+
+    render();
+    if (notes.length > 0) openNote(notes[0].id);
+  </script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Image Transform – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+  <style>
+    .transform-controls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px; }
+    .transform-preview { border: 1px solid #38bdf8; border-radius: 8px; max-width: 100%; max-height: 400px; margin: 15px 0; }
+    .slider-group { display: flex; gap: 10px; align-items: center; }
+    .slider-group input[type="range"] { flex: 1; }
+    .slider-value { min-width: 50px; text-align: right; }
+  </style>
+  <script src="../analytics.js"></script>
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header"><h1>🖼️ Image Transform</h1><p>Rotate, flip, and transform images with live preview.</p></div>
+
+    <div class="card">
+      <div class="input-group"><label for="imageInput">Upload Image</label><input id="imageInput" type="file" accept="image/*" onchange="loadImage()" /></div>
+
+      <div id="transformSection" style="display:none;">
+        <div class="transform-controls">
+          <div>
+            <label>Rotation (°)</label>
+            <div class="slider-group">
+              <input id="rotateSlider" type="range" min="0" max="360" value="0" oninput="updateTransform()" />
+              <span class="slider-value" id="rotateValue">0°</span>
+            </div>
+          </div>
+          <div>
+            <label>Scale (%)</label>
+            <div class="slider-group">
+              <input id="scaleSlider" type="range" min="50" max="200" value="100" oninput="updateTransform()" />
+              <span class="slider-value" id="scaleValue">100%</span>
+            </div>
+          </div>
+          <div>
+            <label>Brightness (%)</label>
+            <div class="slider-group">
+              <input id="brightnessSlider" type="range" min="0" max="200" value="100" oninput="updateTransform()" />
+              <span class="slider-value" id="brightnessValue">100%</span>
+            </div>
+          </div>
+          <div>
+            <label>Contrast (%)</label>
+            <div class="slider-group">
+              <input id="contrastSlider" type="range" min="0" max="200" value="100" oninput="updateTransform()" />
+              <span class="slider-value" id="contrastValue">100%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button class="button-secondary" onclick="flipHorizontal()">⬌ Flip H</button>
+          <button class="button-secondary" onclick="flipVertical()">⬍ Flip V</button>
+          <button class="button-secondary" onclick="resetTransform()">↻ Reset</button>
+          <button class="button-full" onclick="downloadTransformed()">⬇️ Download</button>
+        </div>
+
+        <canvas id="canvas" class="transform-preview" style="display:none;"></canvas>
+        <img id="preview" class="transform-preview" />
+      </div>
+
+      <hr />
+      <h4>About this tool</h4>
+      <p>Transform images with rotation, scaling, brightness, contrast, and flip controls. Live preview updates as you adjust settings. Download the transformed result.</p>
+    </div>
+  </div>
+
+  <footer><p>© 2026 VTools</p></footer>
+
+  <script>
+    let originalImage = null;
+    let flipH = false, flipV = false;
+
+    function loadImage() {
+      const file = document.getElementById('imageInput').files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        originalImage = new Image();
+        originalImage.onload = () => {
+          document.getElementById('transformSection').style.display = 'block';
+          updateTransform();
+        };
+        originalImage.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function updateTransform() {
+      if (!originalImage) return;
+      const rotate = Number(document.getElementById('rotateSlider').value);
+      const scale = Number(document.getElementById('scaleSlider').value) / 100;
+      const brightness = Number(document.getElementById('brightnessSlider').value);
+      const contrast = Number(document.getElementById('contrastSlider').value);
+
+      document.getElementById('rotateValue').textContent = rotate + '°';
+      document.getElementById('scaleValue').textContent = Math.round(scale * 100) + '%';
+      document.getElementById('brightnessValue').textContent = brightness + '%';
+      document.getElementById('contrastValue').textContent = contrast + '%';
+
+      const canvas = document.getElementById('canvas');
+      canvas.width = originalImage.width * scale;
+      canvas.height = originalImage.height * scale;
+      const ctx = canvas.getContext('2d');
+
+      ctx.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((rotate * Math.PI) / 180);
+      ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+      ctx.drawImage(originalImage, -originalImage.width * scale / 2, -originalImage.height * scale / 2, originalImage.width * scale, originalImage.height * scale);
+
+      document.getElementById('preview').src = canvas.toDataURL();
+    }
+
+    function flipHorizontal() {
+      flipH = !flipH;
+      updateTransform();
+    }
+
+    function flipVertical() {
+      flipV = !flipV;
+      updateTransform();
+    }
+
+    function resetTransform() {
+      document.getElementById('rotateSlider').value = 0;
+      document.getElementById('scaleSlider').value = 100;
+      document.getElementById('brightnessSlider').value = 100;
+      document.getElementById('contrastSlider').value = 100;
+      flipH = flipV = false;
+      updateTransform();
+    }
+
+    function downloadTransformed() {
+      const canvas = document.getElementById('canvas');
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = 'transformed-image.png';
+      link.click();
+    }
+  </script>
+</body>
+</html>

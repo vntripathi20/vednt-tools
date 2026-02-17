@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Rock Paper Scissors – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+  <style>
+    .choice-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
+    .choice-btn { padding: 20px; font-size: 32px; cursor: pointer; border: 2px solid #38bdf8; background: #0f172a; color: #38bdf8; border-radius: 8px; transition: all 0.2s; }
+    .choice-btn:hover { background: #38bdf8; color: #0f172a; }
+    .vs-display { display: grid; grid-template-columns: 1fr auto 1fr; gap: 15px; align-items: center; margin: 20px 0; }
+    .choice-display { font-size: 48px; text-align: center; }
+    .vs-label { font-weight: bold; color: #38bdf8; }
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+    .stat-box { padding: 10px; background: rgba(56, 189, 248, 0.1); border-radius: 6px; text-align: center; }
+    .stat-label { font-size: 0.85em; color: #94a3b8; }
+    .stat-value { font-size: 1.5em; font-weight: bold; color: #38bdf8; }
+  </style>
+  <script src="../analytics.js"></script>
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header"><h1>✂️ Rock Paper Scissors</h1><p>Play against the computer with statistics tracking.</p></div>
+
+    <div class="card">
+      <div class="choice-buttons">
+        <button class="choice-btn" onclick="play('rock')" title="Rock">🪨</button>
+        <button class="choice-btn" onclick="play('paper')" title="Paper">📄</button>
+        <button class="choice-btn" onclick="play('scissors')" title="Scissors">✂️</button>
+      </div>
+
+      <div id="gameResult"></div>
+
+      <div class="vs-display" id="vsDisplay" style="display:none;">
+        <div class="choice-display" id="playerChoice">—</div>
+        <div class="vs-label">vs</div>
+        <div class="choice-display" id="computerChoice">—</div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-label">Wins</div>
+          <div class="stat-value" id="wins">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Ties</div>
+          <div class="stat-value" id="ties">0</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Losses</div>
+          <div class="stat-value" id="losses">0</div>
+        </div>
+      </div>
+
+      <div style="margin-top: 12px;">
+        <div class="value-display"><span class="value-label">Win Rate</span><span id="winRate">—</span></div>
+      </div>
+
+      <div class="button-group" style="margin-top: 12px;">
+        <button class="button-secondary" onclick="resetStats()">Reset Stats</button>
+      </div>
+
+      <hr />
+      <h4>About this tool</h4>
+      <p>Classic rock-paper-scissors game with win/loss/tie tracking and win-rate percentage. Stats persist in the current session. Computer picks randomly each turn.</p>
+    </div>
+  </div>
+
+  <footer><p>© 2026 VTools</p></footer>
+
+  <script>
+    const icons = { rock: '🪨', paper: '📄', scissors: '✂️' };
+    let stats = JSON.parse(sessionStorage.getItem('rpsStats') || '{"wins":0,"ties":0,"losses":0}');
+    
+    function updateDisplay() {
+      document.getElementById('wins').textContent = stats.wins;
+      document.getElementById('ties').textContent = stats.ties;
+      document.getElementById('losses').textContent = stats.losses;
+      const total = stats.wins + stats.ties + stats.losses;
+      const rate = total > 0 ? Math.round((stats.wins / total) * 100) : 0;
+      document.getElementById('winRate').textContent = rate + '%';
+    }
+
+    function play(playerChoice) {
+      const choices = ['rock', 'paper', 'scissors'];
+      const computerChoice = choices[Math.floor(Math.random() * 3)];
+      
+      let result = '';
+      if (playerChoice === computerChoice) {
+        stats.ties++;
+        result = '🤝 Tie!';
+      } else if (
+        (playerChoice === 'rock' && computerChoice === 'scissors') ||
+        (playerChoice === 'paper' && computerChoice === 'rock') ||
+        (playerChoice === 'scissors' && computerChoice === 'paper')
+      ) {
+        stats.wins++;
+        result = '🎉 You Win!';
+      } else {
+        stats.losses++;
+        result = '💻 Computer Wins!';
+      }
+
+      document.getElementById('playerChoice').textContent = icons[playerChoice];
+      document.getElementById('computerChoice').textContent = icons[computerChoice];
+      document.getElementById('vsDisplay').style.display = 'grid';
+      document.getElementById('gameResult').innerHTML = `<div class="value-display" style="margin-top:12px;"><span class="value-label">Result</span><span>${result}</span></div>`;
+
+      sessionStorage.setItem('rpsStats', JSON.stringify(stats));
+      updateDisplay();
+    }
+
+    function resetStats() {
+      if (confirm('Reset all stats?')) {
+        stats = { wins: 0, ties: 0, losses: 0 };
+        sessionStorage.setItem('rpsStats', JSON.stringify(stats));
+        updateDisplay();
+        document.getElementById('gameResult').innerHTML = '';
+        document.getElementById('vsDisplay').style.display = 'none';
+      }
+    }
+
+    updateDisplay();
+  </script>
+</body>
+</html>
