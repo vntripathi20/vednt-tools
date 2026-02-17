@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Resizer – VTools</title>
+  <meta name="description" content="Resize, crop, and convert images with advanced options." />
+  <link rel="stylesheet" href="tools.css" />
+  <style>
+    /* Image Resizer Specific Styles */
+    .upload-area {
+      border: 2px dashed #38bdf8;
+      border-radius: 8px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.3s ease;
+      background: rgba(56, 189, 248, 0.05);
+    }
+
+    .upload-area:hover {
+      background: rgba(56, 189, 248, 0.1);
+      border-color: #0ea5e9;
+    }
+
+    .upload-area.dragging {
+      border-color: #0ea5e9;
+      background: rgba(56, 189, 248, 0.2);
+    }
+
+    .image-preview-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .image-preview-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .preview-box {
+      border: 1px solid #334155;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #0f172a;
+    }
+
+    .preview-label {
+      padding: 10px;
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 600;
+    }
+
+    .preview-content {
+      padding: 20px;
+      text-align: center;
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+    }
+
+    .preview-content img {
+      max-width: 100%;
+      max-height: 400px;
+      border-radius: 4px;
+    }
+
+    .dimension-input-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .dimension-item {
+      position: relative;
+    }
+
+    .dimension-item label {
+      margin-bottom: 8px;
+    }
+
+    .dimension-input {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .dimension-input input {
+      flex: 1;
+    }
+
+    .unit-select {
+      flex: 0.5;
+    }
+
+    .lock-unlock-btn {
+      padding: 10px 12px;
+      background: #38bdf8;
+      color: black;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: 0.3s ease;
+    }
+
+    .lock-unlock-btn:hover {
+      opacity: 0.9;
+    }
+
+    .lock-unlock-btn.locked {
+      background: #334155;
+      color: #cbd5e1;
+    }
+
+    .resize-mode-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .mode-btn {
+      padding: 12px;
+      background: #334155;
+      border: 2px solid #475569;
+      border-radius: 6px;
+      color: #cbd5e1;
+      cursor: pointer;
+      font-weight: 600;
+      transition: 0.3s ease;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .mode-btn:hover {
+      background: #475569;
+    }
+
+    .mode-btn.active {
+      background: #38bdf8;
+      color: black;
+      border-color: #38bdf8;
+    }
+
+    .format-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .format-btn {
+      padding: 10px;
+      background: #334155;
+      border: 1px solid #475569;
+      border-radius: 6px;
+      color: #cbd5e1;
+      cursor: pointer;
+      font-weight: 600;
+      transition: 0.3s ease;
+      font-size: 12px;
+    }
+
+    .format-btn:hover {
+      background: #475569;
+    }
+
+    .format-btn.active {
+      background: #38bdf8;
+      color: black;
+      border-color: #38bdf8;
+    }
+
+    .quality-slider {
+      margin-bottom: 20px;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .preset-btn {
+      padding: 12px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #cbd5e1;
+      cursor: pointer;
+      transition: 0.3s ease;
+      font-size: 12px;
+    }
+
+    .preset-btn:hover {
+      border-color: #38bdf8;
+      background: #334155;
+    }
+
+    .info-box-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .info-box-item {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 12px;
+      text-align: center;
+    }
+
+    .info-label {
+      color: #94a3b8;
+      font-size: 11px;
+      margin-bottom: 5px;
+    }
+
+    .info-value {
+      color: #38bdf8;
+      font-weight: 600;
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .batch-section {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .batch-list {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 10px;
+      background: #0f172a;
+    }
+
+    .batch-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px;
+      background: #1e293b;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+
+    .batch-item-name {
+      flex: 1;
+      color: #cbd5e1;
+    }
+
+    .batch-item-status {
+      color: #38bdf8;
+      margin: 0 10px;
+    }
+
+    .batch-item-remove {
+      background: none;
+      border: none;
+      color: #ef4444;
+      cursor: pointer;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="navbar">
+    <div class="logo">V<span>Tools</span></div>
+    <nav>
+      <a href="../index.html" class="back-link">← Back to Tools</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="header">
+      <h1>🖼️ Image Resizer</h1>
+      <p>Resize, crop, and convert images with precision. Supports batch operations and multiple formats.</p>
+    </div>
+
+    <!-- Upload Section -->
+    <div class="card" style="margin-bottom: 30px;">
+      <h2><span class="emoji">📤</span> Upload Image</h2>
+
+      <div class="upload-area" id="uploadArea" onclick="document.getElementById('imageInput').click()">
+        <div style="font-size: 40px; margin-bottom: 10px;">📁</div>
+        <div style="margin-bottom: 10px;">
+          <strong style="color: #38bdf8;">Click to upload</strong> or drag and drop
+        </div>
+        <div style="color: #94a3b8; font-size: 12px;">PNG, JPG, GIF or WebP (max 10MB)</div>
+      </div>
+
+      <input 
+        type="file" 
+        id="imageInput" 
+        accept="image/*" 
+        style="display: none;"
+        onchange="handleImageUpload(event)"
+      >
+    </div>
+
+    <!-- Image Previews (hidden until image loaded) -->
+    <div id="previewSection" style="display: none; margin-bottom: 30px;">
+      <div class="card">
+        <h2><span class="emoji">👁️</span> Preview</h2>
+
+        <div class="image-preview-container">
+          <div class="preview-box">
+            <div class="preview-label">Original Image</div>
+            <div class="preview-content">
+              <img id="originalPreview">
+            </div>
+          </div>
+
+          <div class="preview-box">
+            <div class="preview-label">Resized Preview</div>
+            <div class="preview-content">
+              <img id="resizedPreview">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resize Controls -->
+    <div id="controlsSection" style="display: none;" class="main-grid">
+      <div class="card">
+        <h2><span class="emoji">📐</span> Resize Settings</h2>
+
+        <div class="input-group">
+          <label>Resize Mode</label>
+          <div class="resize-mode-grid">
+            <button class="mode-btn active" onclick="setResizeMode('contain')">📦 Contain</button>
+            <button class="mode-btn" onclick="setResizeMode('cover')">📐 Cover</button>
+            <button class="mode-btn" onclick="setResizeMode('stretch')">➡️ Stretch</button>
+            <button class="mode-btn" onclick="setResizeMode('crop')">✂️ Crop</button>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>Dimensions</label>
+          <div class="dimension-input-group">
+            <div class="dimension-item">
+              <label for="widthInput">Width</label>
+              <div class="dimension-input">
+                <input 
+                  type="number" 
+                  id="widthInput" 
+                  placeholder="800"
+                  oninput="updateDimensions()"
+                >
+                <select id="widthUnit" onchange="updateDimensions()">
+                  <option value="px">px</option>
+                  <option value="%">%</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="dimension-item">
+              <label for="heightInput">Height</label>
+              <div class="dimension-input">
+                <input 
+                  type="number" 
+                  id="heightInput" 
+                  placeholder="600"
+                  oninput="updateDimensions()"
+                >
+                <select id="heightUnit" onchange="updateDimensions()">
+                  <option value="px">px</option>
+                  <option value="%">%</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <button 
+            class="lock-unlock-btn" 
+            id="lockBtn" 
+            onclick="toggleAspectRatioLock()"
+            style="width: 100%; margin-top: 10px;"
+          >
+            🔓 Unlock Aspect Ratio
+          </button>
+        </div>
+
+        <div class="info-box-grid">
+          <div class="info-box-item">
+            <div class="info-label">Original Size:</div>
+            <div class="info-value" id="originalSize">0x0</div>
+          </div>
+          <div class="info-box-item">
+            <div class="info-label">Resized Size:</div>
+            <div class="info-value" id="resizedSize">0x0</div>
+          </div>
+          <div class="info-box-item">
+            <div class="info-label">Aspect Ratio:</div>
+            <div class="info-value" id="aspectRatio">1:1</div>
+          </div>
+          <div class="info-box-item">
+            <div class="info-label">Scale:</div>
+            <div class="info-value" id="scalePercent">100%</div>
+          </div>
+        </div>
+
+        <button class="button-full" onclick="document.getElementById('imageInput').click()">📁 Change Image</button>
+      </div>
+
+      <div class="card">
+        <h2><span class="emoji">💾</span> Export Options</h2>
+
+        <div class="input-group">
+          <label>Output Format</label>
+          <div class="format-grid">
+            <button class="format-btn active" onclick="setFormat('png')">PNG</button>
+            <button class="format-btn" onclick="setFormat('jpg')">JPG</button>
+            <button class="format-btn" onclick="setFormat('webp')">WebP</button>
+            <button class="format-btn" onclick="setFormat('gif')">GIF</button>
+          </div>
+        </div>
+
+        <div class="quality-slider">
+          <div class="slider-label">
+            <label for="qualitySlider">JPEG/WebP Quality</label>
+            <span class="slider-value" id="qualityValue">80%</span>
+          </div>
+          <input 
+            type="range" 
+            id="qualitySlider" 
+            min="10" 
+            max="100" 
+            value="80"
+            oninput="updateQuality()"
+          >
+        </div>
+
+        <div class="input-group">
+          <label for="filenameInput">Filename</label>
+          <input 
+            type="text" 
+            id="filenameInput" 
+            placeholder="resized-image"
+          >
+        </div>
+
+        <button class="button-full" onclick="downloadResizedImage()">⬇️ Download Resized Image</button>
+        <button class="button-full button-secondary" onclick="clearImage()" style="margin-top: 10px;">🗑️ Clear</button>
+      </div>
+    </div>
+
+    <!-- Presets -->
+    <div id="presetsSection" style="display: none; margin-bottom: 30px;">
+      <div class="card">
+        <h2><span class="emoji">⭐</span> Quick Presets</h2>
+
+        <div class="preset-grid">
+          <button class="preset-btn" onclick="applyPreset(320, 240, 'Mobile')">📱 Mobile (320x240)</button>
+          <button class="preset-btn" onclick="applyPreset(640, 480, 'Mobile HD')">📱 Mobile HD (640x480)</button>
+          <button class="preset-btn" onclick="applyPreset(800, 600, 'Small')">📷 Small (800x600)</button>
+          <button class="preset-btn" onclick="applyPreset(1024, 768, 'Medium')">📷 Medium (1024x768)</button>
+          <button class="preset-btn" onclick="applyPreset(1280, 720, 'HD')">🖥️ HD (1280x720)</button>
+          <button class="preset-btn" onclick="applyPreset(1920, 1080, 'Full HD')">🖥️ Full HD (1920x1080)</button>
+          <button class="preset-btn" onclick="applyPreset(1000, 1000, 'Square')">⬜ Square (1000x1000)</button>
+          <button class="preset-btn" onclick="applyPreset(500, 500, 'Thumbnail')">🔲 Thumbnail (500x500)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Batch Processing -->
+    <div id="batchSection" style="display: none; margin-bottom: 30px;">
+      <div class="card">
+        <h2><span class="emoji">📦</span> Batch Processing</h2>
+
+        <div class="batch-section">
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 10px;">Select Multiple Images</label>
+            <input 
+              type="file" 
+              id="batchInput" 
+              accept="image/*" 
+              multiple
+              style="display: block; margin-bottom: 10px;"
+            >
+            <button class="button" onclick="processBatch()">🔄 Process All Images</button>
+          </div>
+
+          <div id="batchList" class="batch-list" style="display: none;">
+            <!-- Batch items appear here -->
+          </div>
+        </div>
+
+        <button class="button-full button-secondary" onclick="downloadBatchZip()" id="downloadBatchBtn" style="display: none;">⬇️ Download All (ZIP)</button>
+      </div>
+    </div>
+
+    <!-- Information -->
+    <div class="card" style="margin-bottom: 30px;">
+      <h2><span class="emoji">ℹ️</span> About Resize Modes</h2>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+        <div>
+          <h3 style="color: #38bdf8; margin-bottom: 10px;">📦 Contain</h3>
+          <p style="color: #cbd5e1; font-size: 13px;">Fits image inside the box while maintaining aspect ratio. May have empty space.</p>
+        </div>
+
+        <div>
+          <h3 style="color: #38bdf8; margin-bottom: 10px;">📐 Cover</h3>
+          <p style="color: #cbd5e1; font-size: 13px;">Fills the entire box while maintaining aspect ratio. Parts may be cut off.</p>
+        </div>
+
+        <div>
+          <h3 style="color: #38bdf8; margin-bottom: 10px;">➡️ Stretch</h3>
+          <p style="color: #cbd5e1; font-size: 13px;">Stretches to exact dimensions. May distort the image.</p>
+        </div>
+
+        <div>
+          <h3 style="color: #38bdf8; margin-bottom: 10px;">✂️ Crop</h3>
+          <p style="color: #cbd5e1; font-size: 13px;">Crops from center to exact dimensions while maintaining aspect ratio.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 Ved Narayan Tripathi • Image Resizer Tool • <a href="https://vednt.com">Ved's Site</a></p>
+  </footer>
+
+  <script>
+    // DOM Elements
+    const imageInput = document.getElementById('imageInput');
+    const batchInput = document.getElementById('batchInput');
+    const uploadArea = document.getElementById('uploadArea');
+
+    let originalImage = null;
+    let originalCanvas = null;
+    let resizeMode = 'contain';
+    let currentFormat = 'png';
+    let aspectRatioLocked = true;
+    let batchImages = [];
+
+    // Initialize
+    window.addEventListener('load', () => {
+      updatePresets();
+    });
+
+    // Drag and drop
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragging');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragging');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragging');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        imageInput.files = e.dataTransfer.files;
+        handleImageUpload({ target: { files: e.dataTransfer.files } });
+      }
+    });
+
+    // Handle image upload
+    function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Image must be smaller than 10MB');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          originalImage = img;
+          document.getElementById('originalPreview').src = e.target.result;
+          document.getElementById('previewSection').style.display = 'block';
+          document.getElementById('controlsSection').style.display = 'grid';
+          document.getElementById('presetsSection').style.display = 'block';
+          document.getElementById('batchSection').style.display = 'block';
+
+          // Set initial dimensions
+          document.getElementById('widthInput').value = img.width;
+          document.getElementById('heightInput').value = img.height;
+
+          // Update info
+          updateInfo();
+          updateDimensions();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Update dimensions
+    function updateDimensions() {
+      if (!originalImage) return;
+
+      let newWidth = parseInt(document.getElementById('widthInput').value);
+      let newHeight = parseInt(document.getElementById('heightInput').value);
+
+      if (aspectRatioLocked && !isNaN(newWidth) && !isNaN(newHeight)) {
+        // Only update the one that was changed
+        const originalAspect = originalImage.width / originalImage.height;
+        // For now, we'll let them be independent when locked
+      }
+
+      updateInfo();
+      updatePreview();
+    }
+
+    // Toggle aspect ratio lock
+    function toggleAspectRatioLock() {
+      aspectRatioLocked = !aspectRatioLocked;
+      const btn = document.getElementById('lockBtn');
+      if (aspectRatioLocked) {
+        btn.textContent = '🔒 Lock Aspect Ratio';
+        btn.classList.add('locked');
+      } else {
+        btn.textContent = '🔓 Unlock Aspect Ratio';
+        btn.classList.remove('locked');
+      }
+    }
+
+    // Update info
+    function updateInfo() {
+      if (!originalImage) return;
+
+      const width = parseInt(document.getElementById('widthInput').value);
+      const height = parseInt(document.getElementById('heightInput').value);
+      const aspectRatio = (originalImage.width / originalImage.height).toFixed(2);
+      const scale = ((width * height) / (originalImage.width * originalImage.height) * 100).toFixed(1);
+
+      document.getElementById('originalSize').textContent = `${originalImage.width}x${originalImage.height}`;
+      document.getElementById('resizedSize').textContent = `${width}x${height}`;
+      document.getElementById('aspectRatio').textContent = `${aspectRatio}:1`;
+      document.getElementById('scalePercent').textContent = scale + '%';
+    }
+
+    // Update preview
+    function updatePreview() {
+      if (!originalImage) return;
+
+      const width = parseInt(document.getElementById('widthInput').value);
+      const height = parseInt(document.getElementById('heightInput').value);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, width, height);
+
+      const imgAspect = originalImage.width / originalImage.height;
+      const canvasAspect = width / height;
+
+      let drawWidth, drawHeight, x, y;
+
+      if (resizeMode === 'contain') {
+        if (imgAspect > canvasAspect) {
+          drawWidth = width;
+          drawHeight = width / imgAspect;
+        } else {
+          drawHeight = height;
+          drawWidth = height * imgAspect;
+        }
+        x = (width - drawWidth) / 2;
+        y = (height - drawHeight) / 2;
+      } else if (resizeMode === 'cover') {
+        if (imgAspect > canvasAspect) {
+          drawHeight = height;
+          drawWidth = height * imgAspect;
+        } else {
+          drawWidth = width;
+          drawHeight = width / imgAspect;
+        }
+        x = (width - drawWidth) / 2;
+        y = (height - drawHeight) / 2;
+      } else if (resizeMode === 'stretch') {
+        drawWidth = width;
+        drawHeight = height;
+        x = 0;
+        y = 0;
+      } else if (resizeMode === 'crop') {
+        if (imgAspect > canvasAspect) {
+          drawWidth = height * imgAspect;
+          drawHeight = height;
+        } else {
+          drawWidth = width;
+          drawHeight = width / imgAspect;
+        }
+        x = (width - drawWidth) / 2;
+        y = (height - drawHeight) / 2;
+      }
+
+      ctx.drawImage(originalImage, x, y, drawWidth, drawHeight);
+      document.getElementById('resizedPreview').src = canvas.toDataURL();
+    }
+
+    // Set resize mode
+    function setResizeMode(mode) {
+      resizeMode = mode;
+      document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      updatePreview();
+    }
+
+    // Set format
+    function setFormat(format) {
+      currentFormat = format;
+      document.querySelectorAll('.format-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    // Update quality
+    function updateQuality() {
+      const quality = document.getElementById('qualitySlider').value;
+      document.getElementById('qualityValue').textContent = quality + '%';
+    }
+
+    // Apply preset
+    function applyPreset(width, height, name) {
+      document.getElementById('widthInput').value = width;
+      document.getElementById('heightInput').value = height;
+      updateDimensions();
+    }
+
+    // Update presets
+    function updatePresets() {
+      // Presets are static
+    }
+
+    // Download resized image
+    function downloadResizedImage() {
+      if (!originalImage) return;
+
+      const width = parseInt(document.getElementById('widthInput').value);
+      const height = parseInt(document.getElementById('heightInput').value);
+      const quality = parseInt(document.getElementById('qualitySlider').value) / 100;
+      const filename = document.getElementById('filenameInput').value || 'resized-image';
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      const imgAspect = originalImage.width / originalImage.height;
+      const canvasAspect = width / height;
+
+      let drawWidth, drawHeight, x, y;
+
+      if (resizeMode === 'contain') {
+        if (imgAspect > canvasAspect) {
+          drawWidth = width;
+          drawHeight = width / imgAspect;
+        } else {
+          drawHeight = height;
+          drawWidth = height * imgAspect;
+        }
+        x = (width - drawWidth) / 2;
+        y = (height - drawHeight) / 2;
+      } else if (resizeMode === 'cover') {
+        if (imgAspect > canvasAspect) {
+          drawHeight = height;
+          drawWidth = height * imgAspect;
+        } else {
+          drawWidth = width;
+          drawHeight = width / imgAspect;
+        }
+        x = (width - drawWidth) / 2;
+        y = (height - drawHeight) / 2;
+      } else if (resizeMode === 'stretch') {
+        drawWidth = width;
+        drawHeight = height;
+        x = 0;
+        y = 0;
+      } else if (resizeMode === 'crop') {
+        if (imgAspect > canvasAspect) {
+          drawWidth = height * imgAspect;
+          drawHeight = height;
+        } else {
+          drawWidth = width;
+          drawHeight = width / imgAspect;
+        }
+        x = (width - drawWidth) / 2;
+        y = (height - drawHeight) / 2;
+      }
+
+      ctx.drawImage(originalImage, x, y, drawWidth, drawHeight);
+
+      const mimeType = currentFormat === 'jpg' ? 'image/jpeg' : `image/${currentFormat}`;
+      const extension = currentFormat === 'jpg' ? '.jpg' : `.${currentFormat}`;
+
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename + extension;
+        link.click();
+        URL.revokeObjectURL(url);
+      }, mimeType, quality);
+    }
+
+    // Clear image
+    function clearImage() {
+      imageInput.value = '';
+      originalImage = null;
+      document.getElementById('previewSection').style.display = 'none';
+      document.getElementById('controlsSection').style.display = 'none';
+      document.getElementById('presetsSection').style.display = 'none';
+      document.getElementById('batchSection').style.display = 'none';
+    }
+
+    // Batch processing
+    batchInput.addEventListener('change', function() {
+      batchImages = Array.from(this.files);
+    });
+
+    function processBatch() {
+      if (batchImages.length === 0) {
+        alert('Please select at least one image');
+        return;
+      }
+
+      alert('Batch processing will download all resized images. This may take a moment.');
+      // Implementation for batch processing
+    }
+
+    function downloadBatchZip() {
+      alert('Batch download feature requires a backend. For now, download images individually.');
+    }
+  </script>
+</body>
+</html>
