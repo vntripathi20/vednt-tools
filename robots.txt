@@ -1,0 +1,8 @@
+# Robots.txt for VTools
+# Allow all search engines to crawl the site
+User-agent: *
+Allow: /
+Disallow: /analytics.js
+
+# Sitemap location
+Sitemap: https://tools.vednt.com/sitemap.xml
