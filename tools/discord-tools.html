@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="Tools for preparing images and GIFs for Discord: compress to under 10MB, resize to 128x128 for emoji, and reduce GIFs under 256KB." />
+  <meta property="og:title" content="Discord Tools - VTools" />
+  <meta property="og:description" content="Compress and resize images/GIFs for Discord emoji and uploads." />
+  <meta property="og:url" content="https://tools.vednt.com/tools/discord-tools.html" />
+  <title>Discord Tools – VTools</title>
+  <link rel="stylesheet" href="tools.css" />
+  <script src="../analytics.js"></script>
+</head>
+<body>
+  <header class="navbar">
+    <a class="logo" href="../index.html">V<span>Tools</span></a>
+    <nav><a href="../index.html" class="back-link">← Back to Tools</a></nav>
+  </header>
+
+  <div class="container">
+    <div class="header"><h1>⚙️ Discord Tools</h1><p>Prepare images and GIFs for Discord uploads and emoji.</p></div>
+
+    <div class="card">
+      <h3>1) Compress image under 10MB</h3>
+      <div class="input-group"><label for="compressFile">Upload image</label><input id="compressFile" type="file" accept="image/*" /></div>
+      <div class="input-group"><label for="targetMB">Target max size (MB)</label><input id="targetMB" type="number" min="0.1" step="0.1" value="10" /></div>
+      <div class="button-group"><button class="button-full" onclick="compressToTarget()">Compress & Download</button></div>
+      <div id="compressStatus" style="margin-top:10px;color:#94a3b8"></div>
+    </div>
+
+    <div class="card">
+      <h3>2) Resize image to 128×128 for Discord emoji</h3>
+      <div class="input-group"><label for="emojiFile">Upload image</label><input id="emojiFile" type="file" accept="image/*" /></div>
+      <div class="button-group"><button class="button-full" onclick="resizeToEmoji()">Resize to 128×128 & Download</button></div>
+      <div id="emojiPreview" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="card">
+      <h3>3) Resize animated GIF under 256KB (best-effort)</h3>
+      <p style="color:#94a3b8;font-size:0.9em">Note: preserving animation requires re-encoding and may take time. This tool will try scaling, frame-skipping and quality reduction to reach the target.</p>
+      <div class="input-group"><label for="gifFile">Upload GIF</label><input id="gifFile" type="file" accept="image/gif" /></div>
+      <div class="input-group"><label for="gifTargetKB">Target max size (KB)</label><input id="gifTargetKB" type="number" min="10" step="1" value="256" /></div>
+      <div class="button-group"><button class="button-full" onclick="processGif()">Resize GIF & Download</button></div>
+      <div id="gifStatus" style="margin-top:10px;color:#94a3b8"></div>
+    </div>
+
+    <hr />
+    <h4>About these tools</h4>
+    <p>These are client-side tools that process images in your browser—no upload to servers. Animated GIF processing uses client-side decoding/re-encoding; large/long GIFs may fail or take long to process.</p>
+  </div>
+
+  <footer><p>© 2026 VTools</p></footer>
+
+  <!-- Libraries for GIF handling -->
+  <script src="https://unpkg.com/gifuct-js/dist/gifuct.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+
+  <script>
+    // Helper: read file as dataURL
+    function readFileAsDataURL(file){return new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(file);});}
+
+    // 1) Compress to target bytes (static images). Iteratively reduce quality and downscale until target met or minimum reached.
+    async function compressToTarget(){
+      const input = document.getElementById('compressFile');
+      const status = document.getElementById('compressStatus');
+      status.textContent = '';
+      const file = input.files && input.files[0];
+      if(!file){ alert('Choose an image first'); return; }
+      const targetMB = Number(document.getElementById('targetMB').value) || 10;
+      const targetBytes = targetMB * 1024 * 1024;
+
+      // If already under target, just download
+      if(file.size <= targetBytes){
+        status.textContent = `Already ${Math.round(file.size/1024)} KB — downloading original.`;
+        const url = URL.createObjectURL(file); const a = document.createElement('a'); a.href=url; a.download = file.name; a.click(); URL.revokeObjectURL(url); return;
+      }
+
+      const dataUrl = await readFileAsDataURL(file);
+      const img = new Image(); img.src = dataUrl;
+      await img.decode();
+
+      let canvas = document.createElement('canvas');
+      let ctx = canvas.getContext('2d');
+
+      // Start with original dimensions
+      let w = img.width, h = img.height;
+      let quality = 0.92;
+      let blob = null;
+      let attempts = 0;
+
+      while(true){
+        attempts++; if(attempts>20) break;
+        canvas.width = w; canvas.height = h;
+        ctx.clearRect(0,0,w,h);
+        ctx.drawImage(img,0,0,w,h);
+        // Try WebP then JPEG fallback
+        blob = await new Promise(res=>canvas.toBlob(res,'image/webp',quality));
+        if(!blob) blob = await new Promise(res=>canvas.toBlob(res,'image/jpeg',quality));
+        if(blob.size <= targetBytes) break;
+        // reduce quality first, then size
+        quality -= 0.08;
+        if(quality < 0.4){
+          // scale down
+          w = Math.round(w * 0.85);
+          h = Math.round(h * 0.85);
+          quality = 0.92;
+        }
+      }
+
+      if(blob && blob.size <= targetBytes){
+        status.textContent = `Success: ${Math.round(blob.size/1024)} KB after ${attempts} attempts.`;
+        const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href=url; a.download = `compressed_${file.name.replace(/\s/g,'_')}`; a.click(); URL.revokeObjectURL(url);
+      } else {
+        status.textContent = `Failed to compress below ${targetMB}MB — best effort produced ${(blob?Math.round(blob.size/1024):0)} KB.`;
+        if(blob){ const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download = `compressed_${file.name.replace(/\s/g,'_')}`; a.click(); URL.revokeObjectURL(url); }
+      }
+    }
+
+    // 2) Resize to 128x128 for emoji
+    async function resizeToEmoji(){
+      const input = document.getElementById('emojiFile');
+      const preview = document.getElementById('emojiPreview'); preview.innerHTML='';
+      const file = input.files && input.files[0]; if(!file){ alert('Choose an image first'); return; }
+      const dataUrl = await readFileAsDataURL(file);
+      const img = new Image(); img.src = dataUrl; await img.decode();
+
+      // Create square 128x128 by cover-cropping
+      const size = 128;
+      const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size; const ctx = canvas.getContext('2d');
+      // compute cover crop
+      const aspect = img.width / img.height;
+      let sx=0, sy=0, sw=img.width, sh=img.height;
+      if(aspect>1){ // wide
+        sw = img.height; sx = Math.round((img.width - sw)/2);
+      } else { // tall
+        sh = img.width; sy = Math.round((img.height - sh)/2);
+      }
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, size, size);
+      // show preview and download
+      const pngUrl = canvas.toDataURL('image/png');
+      preview.innerHTML = `<img src="${pngUrl}" style="width:128px;height:128px;border-radius:8px;box-shadow:0 0 0 2px rgba(56,189,248,0.15);"><div style="margin-top:8px"><button class="button-full" onclick="downloadDataURL('${pngUrl}','emoji_128.png')">Download PNG</button></div>`;
+    }
+
+    function downloadDataURL(dataurl, filename){ const a=document.createElement('a'); a.href=dataurl; a.download=filename; a.click(); }
+
+    // 3) Resize animated GIF under target KB using gifuct-js + gif.js (best-effort)
+    async function processGif(){
+      const input = document.getElementById('gifFile'); const status = document.getElementById('gifStatus'); status.textContent='';
+      const file = input.files && input.files[0]; if(!file){ alert('Choose a GIF first'); return; }
+      const targetKB = Number(document.getElementById('gifTargetKB').value) || 256; const targetBytes = targetKB*1024;
+
+      // Load file as ArrayBuffer
+      const arrayBuffer = await new Promise(res=>{const r=new FileReader(); r.onload=e=>res(e.target.result); r.readAsArrayBuffer(file);});
+
+      let parsed;
+      try{ parsed = gifuct.parseGIF(arrayBuffer); } catch(e){ status.textContent = 'Failed to parse GIF: '+e.message; return; }
+      const frames = gifuct.decompressFrames(parsed, true);
+      if(!frames || frames.length===0){ status.textContent = 'No frames found in GIF.'; return; }
+
+      // Start with scaling factor 1.0 and frame step 1
+      let scale = 1.0; let step = 1; let resultBlob=null; let attempt=0;
+
+      while(attempt<8){
+        attempt++;
+        status.textContent = `Attempt ${attempt}: scale=${Math.round(scale*100)}% step=${step} — encoding...`;
+        // prepare encoder
+        const gif = new GIF({workers:2, quality:10, workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'});
+        // process frames with downscale and skip
+        for(let i=0;i<frames.length;i+=step){
+          const fr = frames[i];
+          // build imageData
+          const tmpCanvas = document.createElement('canvas');
+          tmpCanvas.width = Math.max(1, Math.round(fr.dims.width*scale));
+          tmpCanvas.height = Math.max(1, Math.round(fr.dims.height*scale));
+          const ctx = tmpCanvas.getContext('2d');
+          // create ImageData
+          const imageData = ctx.createImageData(fr.dims.width, fr.dims.height);
+          imageData.data.set(fr.patch);
+          // draw original size to tmpOffscreen then scale
+          const off = document.createElement('canvas'); off.width=fr.dims.width; off.height=fr.dims.height; off.getContext('2d').putImageData(imageData,0,0);
+          ctx.drawImage(off, 0,0, off.width, off.height, 0,0, tmpCanvas.width, tmpCanvas.height);
+          // frame delay (in ms) — gif.js expects delay in ms
+          const delay = (fr.delay || 10) * 10; // gifuct delay is in hundredths of seconds
+          gif.addFrame(ctx, {copy:true, delay: delay});
+        }
+
+        // Render
+        resultBlob = await new Promise((res,rej)=>{
+          gif.on('finished', function(blob){ res(blob); });
+          gif.on('abort', ()=>rej(new Error('aborted')));
+          gif.render();
+        });
+
+        if(resultBlob.size <= targetBytes){
+          status.textContent = `Success: ${Math.round(resultBlob.size/1024)} KB after ${attempt} attempts.`;
+          const url = URL.createObjectURL(resultBlob); const a=document.createElement('a'); a.href=url; a.download = `resized_${file.name}`; a.click(); URL.revokeObjectURL(url);
+          return;
+        }
+        // else reduce quality by skipping frames or scaling
+        if(step < 4) step++; else scale *= 0.7;
+      }
+
+      // failed
+      status.textContent = `Failed to reach ${targetKB}KB. Best result ${(resultBlob?Math.round(resultBlob.size/1024):0)} KB.`;
+      if(resultBlob){ const url = URL.createObjectURL(resultBlob); const a=document.createElement('a'); a.href=url; a.download=`best_${file.name}`; a.click(); URL.revokeObjectURL(url); }
+    }
+  </script>
+</body>
+</html>
